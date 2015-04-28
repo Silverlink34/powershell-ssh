@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Management.Automation;
 using Renci.SshNet;
+using System.IO;
 namespace NewSsh
 {
 	[Cmdlet(VerbsCommon.New, "Ssh")]
@@ -23,13 +24,27 @@ namespace NewSsh
         private string server;
         protected override void ProcessRecord()
 		{
-            if (server.Equals(""))
+            //WriteObject(server);
+            if (server == null)
             {
-                serverPrompt();
+                server = serverPrompt();
+                String username = usernamePrompt();
+                String password = passwordPrompt();
+                SshClient sshClient = new SshClient(server, username, password);
+                sshClient.Connect();
+                ShellStream sshStream = sshClient.CreateShellStream("dumb", 80, 24, 800,600, 1024);
+                StreamWriter output = new StreamWriter(sshStream);
+                StreamReader input = new StreamReader(sshStream);
+                output.AutoFlush = true;
+
+                while (sshStream.Length.Equals(0))
+                {
+                    s
+                }
             }
-            else 
+            else
             {
-                WriteObject("The specified server is: " + server);
+
                 usernamePrompt();
             }
 		}
@@ -46,6 +61,17 @@ namespace NewSsh
             var input = this.InvokeCommand.InvokeScript("Read-Host");
             String server = input.First().BaseObject.ToString();
             return server;
+        }
+        private String passwordPrompt()
+        {
+            WriteObject("Please enter your password.");
+            var input = this.InvokeCommand.InvokeScript("Read-Host -asecurestring");
+            String password = input.First().BaseObject.ToString();
+            return password;
+        }
+        private void processOutput(string output)
+        {
+            WriteObject(output);
         }
 	}
 }
