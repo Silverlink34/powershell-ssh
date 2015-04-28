@@ -5,6 +5,7 @@ using System.Text;
 using System.Management.Automation;
 using Renci.SshNet;
 using System.IO;
+using System.Threading;
 namespace NewSsh
 {
 	[Cmdlet(VerbsCommon.New, "Ssh")]
@@ -22,6 +23,9 @@ namespace NewSsh
         set {server = value;}
         }
         private string server;
+
+        private SshClient sshClient;
+
         protected override void ProcessRecord()
 		{
             //WriteObject(server);
@@ -30,17 +34,14 @@ namespace NewSsh
                 server = serverPrompt();
                 String username = usernamePrompt();
                 String password = passwordPrompt();
-                SshClient sshClient = new SshClient(server, username, password);
+                sshClient = new SshClient(server, username, password);
                 sshClient.Connect();
-                ShellStream sshStream = sshClient.CreateShellStream("dumb", 80, 24, 800,600, 1024);
-                StreamWriter output = new StreamWriter(sshStream);
-                StreamReader input = new StreamReader(sshStream);
-                output.AutoFlush = true;
-
-                while (sshStream.Length.Equals(0))
+                if (sshClient.IsConnected)
                 {
-                    s
+                    processOutput("Successfully connected to " + server);
+                    sshPrompt();
                 }
+                
             }
             else
             {
@@ -72,6 +73,15 @@ namespace NewSsh
         private void processOutput(string output)
         {
             WriteObject(output);
+        }
+        private void sshPrompt()
+        {
+            var input = this.InvokeCommand.InvokeScript("Read-Host \"#\"");
+            String commandString = input.First().BaseObject.ToString();
+            var command = sshClient.RunCommand(commandString);
+            command.Execute();
+            var output = command.Result;
+            processOutput(output);
         }
 	}
 }
