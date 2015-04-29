@@ -13,19 +13,30 @@ namespace NewSsh
 	[Cmdlet(VerbsCommon.New, "Ssh")]
 	public class NewSsh : PSCmdlet
 	{
-        //Declare the first parameter (by position, not a flag) and specify help message.
+        //Positional parameters ex. mycommand param1 param2
         [Parameter(
             Position = 0,
-            HelpMessage = "Server to connect to via ssh."
+            HelpMessage = "Specify a server to connect to via ssh."
         )]
         //The public string here is the actual parameter
         public String Server
         {
-        get {return server;}
-        set {server = value;}
+            get {return server;}
+            set {server = value;}
         }
+        //this is the variable that contains parameter's data
         private string server;
 
+        //Flag parameters ex. mycommand -myparameter
+        [Parameter(HelpMessage = "Specify path to private key file.")]
+        public String PrivateKey
+        {
+            get { return privateKey; }
+            set { privateKey = value; }
+        }
+        private string privateKey;
+
+        //global variables
         private SshClient sshClient;
 
         protected override void ProcessRecord()
@@ -33,27 +44,24 @@ namespace NewSsh
             if (server == null)
             {
                 server = serverPrompt();
-                String username = usernamePrompt();
-                String password = passwordPrompt();
-                sshClient = new SshClient(server, username, password);
-                sshClient.Connect();
-                if (sshClient.IsConnected)
+                if (privateKey == null)
                 {
-                    processOutput("Successfully connected to " + server);
-                    sshPrompt();
+                    passwordAuthenticate();
                 }
-                
+                else
+                {
+                    privateKeyAuthenticate();
+                }
             }
             else
             {
-                String username = usernamePrompt();
-                String password = passwordPrompt();
-                sshClient = new SshClient(server, username, password);
-                sshClient.Connect();
-                if (sshClient.IsConnected)
+                if (privateKey == null)
                 {
-                    processOutput("Successfully connected to " + server);
-                    sshPrompt();
+                    passwordAuthenticate();
+                }
+                else
+                {
+                    privateKeyAuthenticate();
                 }
             }
 		}
@@ -106,6 +114,30 @@ namespace NewSsh
             finally
             {
                 Marshal.ZeroFreeGlobalAllocUnicode(valuePtr);
+            }
+        }
+        private void passwordAuthenticate()
+        {
+            String username = usernamePrompt();
+            String password = passwordPrompt();
+            sshClient = new SshClient(server, username, password);
+            sshClient.Connect();
+            if (sshClient.IsConnected)
+            {
+                processOutput("Successfully connected to " + server);
+                sshPrompt();
+            }
+        }
+        private void privateKeyAuthenticate()
+        {
+            String username = usernamePrompt();
+            sshClient = new SshClient(server, username, 
+                new PrivateKeyFile(File.OpenRead(privateKey)));
+            sshClient.Connect();
+            if (sshClient.IsConnected)
+            {
+                processOutput("Successfully connected to " + server);
+                sshPrompt();
             }
         }
 	}
