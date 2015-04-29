@@ -34,6 +34,20 @@ namespace NewSsh
                 server = serverPrompt();
                 String username = usernamePrompt();
                 String password = passwordPrompt();
+                WriteObject(password);
+                //sshClient = new SshClient(server, username, password);
+                //sshClient.Connect();
+                //if (sshClient.IsConnected)
+                //{
+                //    processOutput("Successfully connected to " + server);
+                //    sshPrompt();
+                //}
+                
+            }
+            else
+            {
+                String username = usernamePrompt();
+                String password = passwordPrompt();
                 sshClient = new SshClient(server, username, password);
                 sshClient.Connect();
                 if (sshClient.IsConnected)
@@ -41,12 +55,6 @@ namespace NewSsh
                     processOutput("Successfully connected to " + server);
                     sshPrompt();
                 }
-                
-            }
-            else
-            {
-
-                usernamePrompt();
             }
 		}
         private String usernamePrompt()
@@ -66,8 +74,9 @@ namespace NewSsh
         private String passwordPrompt()
         {
             WriteObject("Please enter your password.");
-            var input = this.InvokeCommand.InvokeScript("Read-Host -asecurestring");
-            String password = input.First().BaseObject.ToString();
+            var input = this.InvokeCommand.InvokeScript("Read-Host -assecurestring");
+            System.Security.SecureString securePassword = (System.Security.SecureString)input.First().BaseObject;
+
             return password;
         }
         private void processOutput(string output)
@@ -76,12 +85,16 @@ namespace NewSsh
         }
         private void sshPrompt()
         {
-            var input = this.InvokeCommand.InvokeScript("Read-Host \"#\"");
-            String commandString = input.First().BaseObject.ToString();
-            var command = sshClient.RunCommand(commandString);
-            command.Execute();
-            var output = command.Result;
-            processOutput(output);
+            while (sshClient.IsConnected)
+            {
+                var input = this.InvokeCommand.InvokeScript("Read-Host \"#\"");
+                String commandString = input.First().BaseObject.ToString();
+                var command = sshClient.RunCommand(commandString);
+                command.Execute();
+                var output = command.Result;
+                processOutput(output);
+            }
+          
         }
 	}
 }
