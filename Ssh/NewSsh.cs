@@ -6,6 +6,8 @@ using System.Management.Automation;
 using Renci.SshNet;
 using System.IO;
 using System.Threading;
+using System.Security;
+using System.Runtime.InteropServices;
 namespace NewSsh
 {
 	[Cmdlet(VerbsCommon.New, "Ssh")]
@@ -28,20 +30,18 @@ namespace NewSsh
 
         protected override void ProcessRecord()
 		{
-            //WriteObject(server);
             if (server == null)
             {
                 server = serverPrompt();
                 String username = usernamePrompt();
                 String password = passwordPrompt();
-                WriteObject(password);
-                //sshClient = new SshClient(server, username, password);
-                //sshClient.Connect();
-                //if (sshClient.IsConnected)
-                //{
-                //    processOutput("Successfully connected to " + server);
-                //    sshPrompt();
-                //}
+                sshClient = new SshClient(server, username, password);
+                sshClient.Connect();
+                if (sshClient.IsConnected)
+                {
+                    processOutput("Successfully connected to " + server);
+                    sshPrompt();
+                }
                 
             }
             else
@@ -75,8 +75,8 @@ namespace NewSsh
         {
             WriteObject("Please enter your password.");
             var input = this.InvokeCommand.InvokeScript("Read-Host -assecurestring");
-            System.Security.SecureString securePassword = (System.Security.SecureString)input.First().BaseObject;
-
+            SecureString securePassword = (System.Security.SecureString)input.First().BaseObject;
+            String password = SecureStringToString(securePassword);
             return password;
         }
         private void processOutput(string output)
@@ -94,7 +94,19 @@ namespace NewSsh
                 var output = command.Result;
                 processOutput(output);
             }
-          
+        }
+        String SecureStringToString(SecureString value)
+        {
+            IntPtr valuePtr = IntPtr.Zero;
+            try
+            {
+                valuePtr = Marshal.SecureStringToGlobalAllocUnicode(value);
+                return Marshal.PtrToStringUni(valuePtr);
+            }
+            finally
+            {
+                Marshal.ZeroFreeGlobalAllocUnicode(valuePtr);
+            }
         }
 	}
 }
